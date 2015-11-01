@@ -10,7 +10,8 @@ type Result struct {
 	// True or false depending on whether a serious processing error occurred,
 	// such as a missing required parameter. If true there will be no pod
 	// content, just an error.
-	Error bool `xml:"error,attr"`
+	// TODO: Rename
+	ErrorSTATUS bool `xml:"error,attr"`
 
 	// The query ID
 	ID string `xml:"id,attr"`

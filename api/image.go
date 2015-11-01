@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -13,7 +14,7 @@ type Image struct {
 	URL string `xml:"src,attr"`
 
 	// The image alt text
-	AltText string `xml:"alt,attr"`
+	Alt string `xml:"alt,attr"`
 
 	// The image title
 	Title string `xml:"title,attr"`
@@ -23,9 +24,6 @@ type Image struct {
 
 	// The image height, in pixels
 	Height int `xml:"height,attr"`
-
-	// The image HTML
-	HTML string `xml:",innerxml"`
 }
 
 // Mime returns the image MIME type
@@ -33,5 +31,17 @@ func (img Image) Mime() string {
 	if i := strings.Index(img.URL, "MSPStoreType="); i != -1 {
 		return img.URL[i+len("MSPStoreType="):]
 	}
-	return nil
+	return ""
+}
+
+// HTML returns an HTML snippet for displaying the image in a webpage
+func (img Image) HTML() string {
+	return fmt.Sprintf(
+		`<img src="%s" alt="%s" title="%s" width="%d" height="%d"/>`,
+		img.URL,
+		img.Alt,
+		img.Title,
+		img.Width,
+		img.Height,
+	)
 }

@@ -6,15 +6,15 @@ package api
 type Format int
 
 const (
-	Plaintext Format = iota
-	Image
-	MathematicaInput
-	MathematicaOutput
-	Cell
-	MathML
-	ImageMap
-	Sound
-	Wav
+	PlaintextFormat Format = iota
+	ImageF
+	MathematicaInputFormat
+	MathematicaOutputFormat
+	CellFormat
+	MathMLFormat
+	ImageMapFormat
+	SoundFormat
+	WavFormat
 )
 
 // A UnitSystem defines a system of units.
@@ -77,17 +77,17 @@ type Client struct {
 	Units UnitSystem
 }
 
-func NewClient(id string) {
+func NewClient(id string) Client {
 	return Client{
 		AppID: id,
 	}
 }
 
-func (c *Client) Query(input string) Result {
-}
-
-func (c *Client) Validate(input string) Result {
-}
-
-func (c *Client) Ask(input string) string {
-}
+// func (c *Client) Query(input string) Result {
+// }
+//
+// func (c *Client) Validate(input string) Result {
+// }
+//
+// func (c *Client) Ask(input string) string {
+// }

@@ -10,9 +10,9 @@ package api
 // as a whole succeeds. When this happens, the Pod that failed will have the
 // Error.
 type Error struct {
-	// A short message describing the error
-	Message string `xml:"msg"`
-
 	// The error code
 	Code int `xml:"code"`
+
+	// A short message describing the error
+	Message string `xml:"msg"`
 }

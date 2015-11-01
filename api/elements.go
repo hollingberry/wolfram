@@ -7,6 +7,12 @@ import (
 
 // An Assumption defines a single assumption, typically about the meaning of a
 // word or phrase in the query, and a series of possible other values.
+//
+// For instance, Wolfram Alpha will assume that the query "pi" refers to the
+// mathematical constant, as opposed to the Greek character, the movie, etc. The
+// Result for this query will have an Assumption with this information.
+//
+// TODO: Add template field (see assumptions.xml)
 type Assumption struct {
 	// The assumption type
 	Type string `xml:"type,attr"`
@@ -19,6 +25,9 @@ type Assumption struct {
 }
 
 // An AssumptionValue defines a possible value for an assumption.
+//
+// In the Assumption example above, there would be an AssumptionValue for the
+// mathematical constant pi, for the Greek character pi, for the movie Pi, etc.
 type AssumptionValue struct {
 	// The unique internal identifier for the assumption value
 	Name string `xml:"name,attr"`
@@ -61,10 +70,13 @@ type ExamplePage struct {
 	URL string `xml:"url,attr"`
 }
 
-// An Image represents an <img> element, an element returned by the
-// Wolfram Alpha API when image results are requested. They point to stored
-// image files (usually GIFs, but sometimes JPEGs) giving a formatted visual
-// representation of a single subpod.
+// An Image occurs within a Subpod when image results are requested. They point
+// to stored image files (usually GIFs, but sometimes JPEGs) giving a formatted
+// visual representation of a single subpod.
+//
+// If requested, almost all subpods will include an Image representation—even
+// textual subpods. That is, the Image in textual subpods will just point to a
+// picture of text.
 type Image struct {
 	// The image URL
 	URL string `xml:"src,attr"`
@@ -82,15 +94,7 @@ type Image struct {
 	Height int `xml:"height,attr"`
 }
 
-// Mime returns the image MIME type
-func (img Image) Mime() string {
-	if i := strings.Index(img.URL, "MSPStoreType="); i != -1 {
-		return img.URL[i+len("MSPStoreType="):]
-	}
-	return ""
-}
-
-// HTML returns an HTML snippet for displaying the image in a webpage
+// HTML returns an HTML string for displaying the image in a webpage.
 func (img Image) HTML() string {
 	return fmt.Sprintf(
 		`<img src="%s" alt="%s" title="%s" width="%d" height="%d"/>`,
@@ -102,9 +106,20 @@ func (img Image) HTML() string {
 	)
 }
 
-// A LanguageMessage is used to represent a <languagemsg> element, an element
-// used by Wolfram Alpha to provide details when it recognizes that your query
-// is in a foreign language.
+// Mime returns the image MIME type, or an empty string if the MIME type cannot
+// be guessed.
+// TODO: Fix for when there is an s= parameter. Use net/url probably.
+func (img Image) Mime() string {
+	if i := strings.Index(img.URL, "MSPStoreType="); i != -1 {
+		return img.URL[i+len("MSPStoreType="):]
+	}
+	return ""
+}
+
+// A LanguageMessage occurs when a query is in a foreign language.
+//
+// For instance, the Result for the query "wo noch nie" will contain a
+// LanguageMessage explaining that Wolfram Alpha does not yet support German.
 type LanguageMessage struct {
 	// The message in English
 	English string `xml:"english,attr"`
@@ -113,10 +128,14 @@ type LanguageMessage struct {
 	Other string `xml:"other,attr"`
 }
 
-// A Pod is used to group related results.
+// A Pod corresponds roughly to one category of result. The Result for all
+// queries will contain at least two Pods (the "Input interpretation" and
+// "Result"); many queries return more.
 //
-// For example, the query "amanita" would produce several pods, including ones
-// for the mushroom's scientific name, taxonomy, and image, among others.
+// For example, the query "amanita" produces seven pods, which have titles like
+// "Scientific name", "Taxonomy", and "Image", among others.
+//
+// TODO: Make the field comments prettier
 type Pod struct {
 	// The pod title
 	Title string `xml:"title,attr"`
@@ -124,16 +143,18 @@ type Pod struct {
 	// The name of the scanner that produced the pod
 	Scanner string `xml:"scanner,attr"`
 
-	// The pod ID
+	// The unique internal identifier for the pod type
 	ID string `xml:"id,attr"`
 
-	// A number indicating the intended position of the pod in a visual display
+	// An integer (often a multiple of 100) indicating the intended position of
+	// the pod in a visual display. Pods with a smaller position should be
+	// displayed above pods with a greater position.
 	Position int `xml:"position,attr"`
 
 	// Whether a serious processing error occurred with this specific pod
 	Error bool `xml:"error,attr"`
 
-	// True if the pod is the query's primary pod
+	// Whether the pod is the query's primary pod
 	Primary bool `xml:"primary,attr"`
 
 	// The pod subpods
@@ -146,8 +167,8 @@ type Pod struct {
 // For example, the nonsensical query "blue mustang moon" might be reinterpreted
 // as "mustang moon," the name of a 2002 book by Terri Farley.
 type Reinterpretation struct {
-	// A message that could be displayed to the user before showing the new query.
-	// This is almost always "Using closest Wolfram|Alpha interpretation:"
+	// A message that could be displayed to the user before showing the new query
+	// (e.g., "Using closest Wolfram|Alpha interpretation:")
 	Message string `xml:"text,attr"`
 
 	// The new query
@@ -164,6 +185,8 @@ type Reinterpretation struct {
 
 // A Result represents a <queryresult> element, the top-level element in queries
 // to the Wolfram Alpha API.
+//
+// TODO: Add field comments
 type Result struct {
 	// A comma-separated list of the categories and types of data represented in
 	// the results
@@ -203,12 +226,16 @@ type Result struct {
 //
 // func (res Result) Tips() {}
 
-// A Source represents a <source> element, an element used by the Wolfram Alpha
-// API to provide a link to a web page of source information.  Source
-// information is not always present, such as for a purely mathematical
-// computation.
+// A Source provides a link to a web page with source information. Sources are
+// found in Results that do not exclusively use "common knowledge" or purely
+// mathematical computation.
+//
+// Note that the URL links not directly to a source, but rather to a Wolfram
+// Alpha webpage with source information for a general topic. See
+// http://www.wolframalpha.com/sources/GivenNameDataSourceInformationNotes.html
+// as an example.
 type Source struct {
-	// The source URL
+	// The address of the web page with source information
 	URL string `xml:"url,attr"`
 
 	// A short description of the source
@@ -223,7 +250,7 @@ type Source struct {
 // representations might include a textual representation, an image, MathML, or
 // Mathematica input/output.
 type Subpod struct {
-	// The subpod title
+	// The subpod title, usually an empty string
 	Title string `xml:"title,attr"`
 
 	// The subpod image

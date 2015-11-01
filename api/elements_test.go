@@ -16,15 +16,15 @@ var elementTests = []struct {
 	{
 		Msg: "Basic unmarshal of <error>",
 		XML: `<error>
-						<code>2</code>
-						<msg>Appid missing</msg>
-					</error>`,
+		        <code>2</code>
+		        <msg>Appid missing</msg>
+		      </error>`,
 		Value: &Error{Code: 2, Message: "Appid missing"},
 	},
 	{
 		Msg: "Basic unmarshal of <examplepage>",
 		XML: `<examplepage category='ChemicalCompounds'
-					  url='http://wolframalpha.com/examples/....htm'/>`,
+		        url='http://wolframalpha.com/examples/....htm'/>`,
 		Value: &ExamplePage{
 			Topic: "ChemicalCompounds",
 			URL:   "http://wolframalpha.com/examples/....htm",
@@ -33,10 +33,10 @@ var elementTests = []struct {
 	{
 		Msg: "Basic unmarshal of <img>",
 		XML: `<img src="http://wolframalpha.com/53?MSPStoreType=image/gif"
-						alt="x = 0"
-						title="x = 0"
-						width="36"
-						height="18"/>`,
+		        alt="x = 0"
+		        title="x = 0"
+		        width="36"
+		        height="18"/>`,
 		Value: &Image{
 			URL:    "http://wolframalpha.com/53?MSPStoreType=image/gif",
 			Alt:    "x = 0",
@@ -46,7 +46,8 @@ var elementTests = []struct {
 		},
 		Computed: map[string]interface{}{
 			"Mime": "image/gif",
-			"HTML": `<img src="http://wolframalpha.com/53?MSPStoreType=image/gif" alt="x = 0" title="x = 0" width="36" height="18"/>`,
+			"HTML": `<img src="http://wolframalpha.com/53?MSPStoreType=image/gif" ` +
+				`alt="x = 0" title="x = 0" width="36" height="18"/>`,
 		},
 	},
 }

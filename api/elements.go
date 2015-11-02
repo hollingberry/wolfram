@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"strings"
+	"net/url"
 )
 
 // An Assumption defines a single assumption, typically about the meaning of a
@@ -108,12 +108,12 @@ func (img Image) HTML() string {
 
 // Mime returns the image MIME type, or an empty string if the MIME type cannot
 // be guessed.
-// TODO: Fix for when there is an s= parameter. Use net/url probably.
 func (img Image) Mime() string {
-	if i := strings.Index(img.URL, "MSPStoreType="); i != -1 {
-		return img.URL[i+len("MSPStoreType="):]
+	u, err := url.Parse(img.URL)
+	if err != nil {
+		return ""
 	}
-	return ""
+	return u.Query().Get("MSPStoreType")
 }
 
 // A LanguageMessage occurs when a query is in a foreign language.

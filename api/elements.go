@@ -31,13 +31,13 @@ type Assumption struct {
 // In the Assumption example above, there would be an AssumptionValue for the
 // mathematical constant pi, for the Greek character pi, for the movie Pi, etc.
 type AssumptionValue struct {
-	// The unique internal identifier for the assumption value
+	// The internal identifier for the assumption value
 	Name string `xml:"name,attr"`
 
-	// A textual description of the assumption suitable for display to users
+	// A description of the assumption suitable for display to the user
 	Description string `xml:"desc,attr"`
 
-	// The parameter value needed to invoke this assumption in a subsequent query
+	// The query value needed to invoke this assumption in a subsequent query
 	Input string `xml:"input,attr"`
 }
 
@@ -143,7 +143,7 @@ type Pod struct {
 	// The name of the scanner that produced the pod
 	Scanner string `xml:"scanner,attr"`
 
-	// The unique internal identifier for the pod type
+	// The internal identifier for the pod type
 	ID string `xml:"id,attr"`
 
 	// An integer (often a multiple of 100) indicating the intended position of
@@ -151,7 +151,7 @@ type Pod struct {
 	// displayed above pods with a greater position.
 	Position int `xml:"position,attr"`
 
-	// Whether a serious processing error occurred with this specific pod
+	// Whether the pod failed to be processed
 	Error bool `xml:"error,attr"`
 
 	// Whether the pod is the query's primary pod
@@ -186,72 +186,65 @@ type Reinterpretation struct {
 // A Result represents the Wolfram Alpha API's response to a single query.
 // Results are returned from a Client when a query is made.
 type Result struct {
-	// A comma-separated list of the categories and types of data represented in
-	// the results
-	Datatypes string `xml:"datatypes,attr"`
-
-	// Whether a serious processing error occurred, such as a missing required
-	// parameter. If true there will be no pod content, just an error.
-	DidError bool `xml:"error,attr"`
-
-	// The query ID
+	// The internal identifier for the result
 	ID string `xml:"id,attr"`
 
-	// Whether the parsing stage timed out (if true, then try a longer
-	// ParseTimeout parameter)
-	ParseTimedOut bool `xml:"parsetimedout,attr"`
+	// Whether the input was understood
+	Succeeded bool `xml:"success,attr"`
 
-	// The wall clock time to parse the query
-	ParseTiming float32 `xml:"parsetiming,attr"`
+	// Whether a serious processing error occured
+	Errored bool `xml:"error,attr"`
+
+	// The error, if a serious processing error occured
+	Error Error `xml:"error"`
 
 	// A URL to recalculate the query and get more pods, if there were errors
 	Recalculate string `xml:"recalculate,attr"`
 
-	// Whether the input was understood (if false, there will be no pods)
-	Success bool `xml:"success,attr"`
+	// A comma-separated list of the types of data represented in the result
+	DataTypes string `xml:"datatypes,attr"`
 
-	// A comma-separated list of the pod IDs that are missing because they timed
-	// out (see the ScanTimeout query parameter)
-	TimedOut string `xml:"timedout,attr"` // arraylike
+	// The wall clock time to parse the query, in seconds
+	ParseTiming float32 `xml:"parsetiming,attr"`
+
+	// Whether the parsing stage timed out
+	ParseTimedOut bool `xml:"parsetimedout,attr"`
 
 	// The wall clock time to generate the result, in seconds
 	Timing float32 `xml:"timing,attr"`
 
-	// The API version
-	Version string `xml:"version,attr"`
-
-	// The result error, if there was a failure that prevented any result from
-	// being returned
-	Error Error `xml:"error"`
-
-	// The example page, if applicable
-	ExamplePage ExamplePage `xml:"examplepage"`
-
-	// The language message, if applicable
-	LanguageMessage LanguageMessage `xml:"languagemsg"`
-
-	// The description of a topic, if the query referred to a topic under
-	// development
-	FutureTopic string `xml:"futuretopic>topic,attr"`
-
-	// The query reinterpretation, if applicable
-	Reinterpretation Reinterpretation `xml:"reinterpret"`
-
-	// The query assumptions, if any
-	Assumptions []Assumption `xml:"assumption"`
+	// A comma-separated list of the IDs of pods that timed out
+	TimedOut string `xml:"timedout,attr"`
 
 	// The result pods
 	Pods []Pod `xml:"pod"`
 
-	// A list of tips, if any
+	// The query assumptions, if any were made
+	Assumptions []Assumption `xml:"assumption"`
+
+	// The example page, if the query referred to a general topic
+	ExamplePage ExamplePage `xml:"examplepage"`
+
+	// The topic name, if the query concerned a topic under development
+	FutureTopic string `xml:"futuretopic>topic,attr"`
+
+	// The language message, if the query was not in English
+	LanguageMessage LanguageMessage `xml:"languagemsg"`
+
+	// The query reinterpretation, if the query was reinterpreted
+	Reinterpretation Reinterpretation `xml:"reinterpret"`
+
+	// Alternative queries, close in spelling or meaning to the original, if any
+	Suggestions []string `xml:"didyoumean"`
+
+	// Tips (e.g., "Check your spelling and use English") for the user, if any
 	Tips []string `xml:"tips>tip>text,attr"`
 
-	// The sources used to compute the result
+	// The sources used to compute the result, if any
 	Sources []Source `xml:"source"`
 
-	// Some alternative queries, close in spelling or meaning to the one you
-	// entered, if any
-	Suggestions []string `xml:"didyoumean"`
+	// The API version
+	Version string `xml:"version,attr"`
 }
 
 // PrimaryText returns the first primary pod's plaintext representation
@@ -283,24 +276,26 @@ type Source struct {
 	Description string `xml:"text,attr"`
 }
 
-// A Subpod represents a <subpod> element, an element used by the Wolfram Alpha
-// API to hold some kind of information in the results from a query. Subpods
-// include various representations of a single datum.
+// A Subpod contains a distinct result or image for a Pod. Each Subpod may
+// include various representations of the result, depending on what formats
+// were requested and what is relevant to the query.
 //
-// Depending on the query and what type of results are specified, these
-// representations might include a textual representation, an image, MathML, or
-// Mathematica input/output.
+// At the very least, all Subpods will have an image (possibly a picture of
+// text).
 type Subpod struct {
 	// The subpod title, usually an empty string
 	Title string `xml:"title,attr"`
 
-	// The subpod image
-	Image Image `xml:"img"`
+	// Whether the subpod is the query's primary subpod
+	Primary bool `xml:"primary,attr"`
 
-	// The subpod plaintext representation
+	// The subpod plaintext representation, if available
 	Plaintext string `xml:"plaintext"`
 
-	// The subpod MathML representation
+	// The subpod image, if available
+	Image Image `xml:"img"`
+
+	// The subpod MathML representation, if available
 	MathML string `xml:"mathml,innerxml"`
 
 	// The Mathematica input, if available
@@ -308,7 +303,4 @@ type Subpod struct {
 
 	// The Mathematica output, if available
 	MathematicaOutput string `xml:"moutput"`
-
-	// Whether the subpod is the query's primary subpod
-	Primary bool `xml:"primary,attr"`
 }

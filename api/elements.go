@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 )
@@ -11,8 +12,6 @@ import (
 // For instance, Wolfram Alpha will assume that the query "pi" refers to the
 // mathematical constant, as opposed to the Greek character, the movie, etc. The
 // Result for this query will have an Assumption with this information.
-//
-// TODO: Add template field (see assumptions.xml)
 type Assumption struct {
 	// The assumption type
 	Type string `xml:"type,attr"`
@@ -22,6 +21,9 @@ type Assumption struct {
 
 	// The possible assumption values (the first is the assumed value)
 	Values []AssumptionValue `xml:"value"`
+
+	// A template for generating a message to display to the user
+	Template string `xml:"template,attr"`
 }
 
 // An AssumptionValue defines a possible value for an assumption.
@@ -134,8 +136,6 @@ type LanguageMessage struct {
 //
 // For example, the query "amanita" produces seven pods, which have titles like
 // "Scientific name", "Taxonomy", and "Image", among others.
-//
-// TODO: Make the field comments prettier
 type Pod struct {
 	// The pod title
 	Title string `xml:"title,attr"`
@@ -168,7 +168,7 @@ type Pod struct {
 // as "mustang moon," the name of a 2002 book by Terri Farley.
 type Reinterpretation struct {
 	// A message that could be displayed to the user before showing the new query
-	// (e.g., "Using closest Wolfram|Alpha interpretation:")
+	// (usually "Using closest Wolfram|Alpha interpretation:")
 	Message string `xml:"text,attr"`
 
 	// The new query
@@ -183,48 +183,89 @@ type Reinterpretation struct {
 	Level string `xml:"level,attr"`
 }
 
-// A Result represents a <queryresult> element, the top-level element in queries
-// to the Wolfram Alpha API.
-//
-// TODO: Add field comments
+// A Result represents the Wolfram Alpha API's response to a single query.
+// Results are returned from a Client when a query is made.
 type Result struct {
 	// A comma-separated list of the categories and types of data represented in
 	// the results
 	Datatypes string `xml:"datatypes,attr"`
 
-	// True or false depending on whether a serious processing error occurred,
-	// such as a missing required parameter. If true there will be no pod
-	// content, just an error.
-	// TODO: Rename
-	ErrorSTATUS bool `xml:"error,attr"`
+	// Whether a serious processing error occurred, such as a missing required
+	// parameter. If true there will be no pod content, just an error.
+	DidError bool `xml:"error,attr"`
 
 	// The query ID
 	ID string `xml:"id,attr"`
 
-	ParseTimedOut    bool             `xml:"parsetimedout,attr"`
-	ParseTiming      float32          `xml:"parsetiming,attr"`
-	Recalculate      string           `xml:"recalculate,attr"`
-	Success          bool             `xml:"success,attr"`
-	TimedOut         string           `xml:"timedout,attr"` // arraylike
-	Timing           float32          `xml:"timing,attr"`
-	Version          string           `xml:"version,attr"`
-	Error            Error            `xml:"error"`
-	ExamplePage      ExamplePage      `xml:"examplepage"`
-	LanguageMessage  LanguageMessage  `xml:"languagemsg"`
+	// Whether the parsing stage timed out (if true, then try a longer
+	// ParseTimeout parameter)
+	ParseTimedOut bool `xml:"parsetimedout,attr"`
+
+	// The wall clock time to parse the query
+	ParseTiming float32 `xml:"parsetiming,attr"`
+
+	// A URL to recalculate the query and get more pods, if there were errors
+	Recalculate string `xml:"recalculate,attr"`
+
+	// Whether the input was understood (if false, there will be no pods)
+	Success bool `xml:"success,attr"`
+
+	// A comma-separated list of the pod IDs that are missing because they timed
+	// out (see the ScanTimeout query parameter)
+	TimedOut string `xml:"timedout,attr"` // arraylike
+
+	// The wall clock time to generate the result, in seconds
+	Timing float32 `xml:"timing,attr"`
+
+	// The API version
+	Version string `xml:"version,attr"`
+
+	// The result error, if there was a failure that prevented any result from
+	// being returned
+	Error Error `xml:"error"`
+
+	// The example page, if applicable
+	ExamplePage ExamplePage `xml:"examplepage"`
+
+	// The language message, if applicable
+	LanguageMessage LanguageMessage `xml:"languagemsg"`
+
+	// The description of a topic, if the query referred to a topic under
+	// development
+	FutureTopic string `xml:"futuretopic>topic,attr"`
+
+	// The query reinterpretation, if applicable
 	Reinterpretation Reinterpretation `xml:"reinterpret"`
-	Assumptions      []Assumption     `xml:"assumption"`
-	Pods             []Pod            `xml:"pod"`
-	Sources          []Source         `xml:"source"`
-	Suggestions      []string         `xml:"didyoumean"`
+
+	// The query assumptions, if any
+	Assumptions []Assumption `xml:"assumption"`
+
+	// The result pods
+	Pods []Pod `xml:"pod"`
+
+	// A list of tips, if any
+	Tips []string `xml:"tips>tip>text,attr"`
+
+	// The sources used to compute the result
+	Sources []Source `xml:"source"`
+
+	// Some alternative queries, close in spelling or meaning to the one you
+	// entered, if any
+	Suggestions []string `xml:"didyoumean"`
 }
 
-// func (res Result) FutureTopic() {}
-//
-// func (res Result) PrimaryText() {}
-//
-// func (res Result) Reinterpreted() {}
-//
-// func (res Result) Tips() {}
+// PrimaryText returns the first primary pod's plaintext representation
+func (res Result) PrimaryText() (text string, err error) {
+	for pod := range res.Pods {
+		if pod.Primary {
+			if len(pod.Subpods) == 0 {
+				return "", errors.New("no subpods in first primary pod")
+			}
+			return pod.Subpods[0].Plaintext
+		}
+	}
+	return "", errors.New("no primary pods")
+}
 
 // A Source provides a link to a web page with source information. Sources are
 // found in Results that do not exclusively use "common knowledge" or purely

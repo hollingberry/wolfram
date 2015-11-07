@@ -87,7 +87,7 @@ func TestImage(t *testing.T) {
 func TestImage_HTML(t *testing.T) {
 	assert.Equal(
 		t,
-		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="36" height="18"></img>`,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="36" height="18"/>`,
 		Image{
 			URL:    "http://wolframalpha.com/53",
 			Alt:    "x = 0",
@@ -98,7 +98,7 @@ func TestImage_HTML(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" height="18"></img>`,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" height="18"/>`,
 		Image{
 			URL:    "http://wolframalpha.com/53",
 			Alt:    "x = 0",
@@ -109,7 +109,7 @@ func TestImage_HTML(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="30"></img>`,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="30"/>`,
 		Image{
 			URL:    "http://wolframalpha.com/53",
 			Alt:    "x = 0",

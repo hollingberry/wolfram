@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/xml"
-	"errors"
 	"net/url"
 	"strings"
 )
@@ -119,7 +118,7 @@ func (img Image) HTML() string {
 	if err != nil {
 		panic(err)
 	}
-	return string(imgXML)
+	return strings.Replace(string(imgXML), "></img>", "/>", 1)
 }
 
 // Mime returns the image MIME type, or an empty string if the MIME type cannot

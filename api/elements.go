@@ -4,14 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // An Assumption defines a single assumption, typically about the meaning of a
 // word or phrase in the query, and a series of possible other values.
 //
 // For instance, Wolfram Alpha will assume that the query "pi" refers to the
-// mathematical constant, as opposed to the Greek character, the movie, etc. The
-// Result for this query will have an Assumption with this information.
+// mathematical constant, as opposed to the Greek character, the movie, etc.
+// The Result for the query "pi", then, will have an Assumption with this
+// information.
 type Assumption struct {
 	// The assumption type
 	Type string `xml:"type,attr"`
@@ -29,7 +31,7 @@ type Assumption struct {
 // An AssumptionValue defines a possible value for an assumption.
 //
 // In the Assumption example above, there would be an AssumptionValue for the
-// mathematical constant pi, for the Greek character pi, for the movie Pi, etc.
+// mathematical constant 3.14159..., for the Greek character π, for the movie Pi, etc.
 type AssumptionValue struct {
 	// The internal identifier for the assumption value
 	Name string `xml:"name,attr"`
@@ -43,7 +45,7 @@ type AssumptionValue struct {
 
 // An Error occurs when something goes wrong with the request.
 //
-// This might occur when the query as a whole fails (e.g., the input parameters
+// This might happen when the query as a whole fails (e.g., the input parameters
 // are invalid, the App ID is incorrect, or Wolfram Alpha experiences an
 // internal error). In such cases, the Result will have the Error.
 //
@@ -62,7 +64,7 @@ type Error struct {
 // recognized as a topic for which a set of example queries has already been
 // prepared.
 //
-// For example, the query "calculus" would return a Result with an ExamplePage
+// For example, the Result for the query "calculus" would include an ExamplePage
 // linking to http://www.wolframalpha.com/examples/Calculus-content.html.
 type ExamplePage struct {
 	// The topic name
@@ -77,8 +79,8 @@ type ExamplePage struct {
 // visual representation of a single subpod.
 //
 // If requested, almost all subpods will include an Image representation—even
-// textual subpods. That is, the Image in textual subpods will just point to a
-// picture of text.
+// textual subpods. (The image in textual subpods will just point to a picture
+// of text.)
 type Image struct {
 	// The image URL
 	URL string `xml:"src,attr"`
@@ -130,49 +132,61 @@ type LanguageMessage struct {
 	Other string `xml:"other,attr"`
 }
 
-// A Pod corresponds roughly to one category of result. The Result for all
-// queries will contain at least two Pods (the "Input interpretation" and
-// "Result"); many queries return more.
+// MathML occurs within a Subpod when MathML results are requested. MathML is a
+// low-level specification for mathematical and scientific content on the Web
+// and beyond. See http://www.w3.org/Math/ for the specification.
 //
-// For example, the query "amanita" produces seven pods, which have titles like
-// "Scientific name", "Taxonomy", and "Image", among others.
+// Though it only has one field, this type is needed for unmarshaling the inner
+// XML of MathML elements due to limitations of the encoding/xml package. See
+// http://grokbase.com/t/gg/golang-nuts/149neksqjs/go-nuts-xml-package-problems
+// for details.
+type MathML struct {
+	// The MathML content
+	Xml string `xml:",innerxml"`
+}
+
+// A Pod corresponds roughly to one category of result. All queries will return
+// a Result with at least two Pods (the "Input interpretation" and "Result");
+// many queries will return more.
+//
+// For example, the Result for the query "amanita" contains seven pods, which
+// have titles like "Scientific name", "Taxonomy", and "Image", among others.
 type Pod struct {
 	// The pod title
 	Title string `xml:"title,attr"`
 
-	// The name of the scanner that produced the pod
-	Scanner string `xml:"scanner,attr"`
+	// The pod subpods
+	Subpods []Subpod `xml:"subpod"`
 
 	// The internal identifier for the pod type
 	ID string `xml:"id,attr"`
 
-	// An integer (often a multiple of 100) indicating the intended position of
-	// the pod in a visual display. Pods with a smaller position should be
-	// displayed above pods with a greater position.
+	// The name of the scanner that produced the pod
+	Scanner string `xml:"scanner,attr"`
+
+	// A number indicating the intended position of the pod in a visual display
+	// (the uppermost pod should have the lowest position)
 	Position int `xml:"position,attr"`
 
-	// Whether the pod failed to be processed
-	Error bool `xml:"error,attr"`
+	// Whether the pod couldn't be processed
+	Errored bool `xml:"error,attr"`
 
 	// Whether the pod is the query's primary pod
 	Primary bool `xml:"primary,attr"`
-
-	// The pod subpods
-	Subpods []Subpod `xml:"subpod"`
 }
 
 // A Reinterpretation occurs when Wolfram Alpha cannot understand a query and
 // replaces it with a new query that seems close in meaning to the original.
 //
-// For example, the nonsensical query "blue mustang moon" might be reinterpreted
-// as "mustang moon," the name of a 2002 book by Terri Farley.
+// For example, the nonsensical query "blue mustang moon" might be replaced by
+// the query "mustang moon," the name of a 2002 book by Terri Farley.
 type Reinterpretation struct {
+	// The new query
+	Query string `xml:"new,attr"`
+
 	// A message that could be displayed to the user before showing the new query
 	// (usually "Using closest Wolfram|Alpha interpretation:")
 	Message string `xml:"text,attr"`
-
-	// The new query
-	Query string `xml:"new,attr"`
 
 	// A value from 0 to 1 indicating how similar the new query is to the original
 	// query
@@ -189,13 +203,40 @@ type Result struct {
 	// The internal identifier for the result
 	ID string `xml:"id,attr"`
 
+	// The result pods
+	Pods []Pod `xml:"pod"`
+
+	// The query assumptions, if any were made
+	Assumptions []Assumption `xml:"assumption"`
+
+	// The example page, if the query referred to a general topic
+	ExamplePage *ExamplePage `xml:"examplepage"`
+
+	// The topic name, if the query concerned a topic under development
+	FutureTopic string `xml:"futuretopic>topic,attr"`
+
+	// The language message, if the query was not in English
+	LanguageMessage *LanguageMessage `xml:"languagemsg"`
+
+	// The query reinterpretation, if the query was reinterpreted
+	Reinterpretation *Reinterpretation `xml:"reinterpret"`
+
+	// Alternative queries, close in spelling or meaning to the original, if any
+	Suggestions []string `xml:"didyoumean"`
+
+	// Tips (e.g., "Check your spelling and use English") for the user, if any
+	Tips []string `xml:"tips>tip>text,attr"`
+
+	// The sources used to compute the result, if any
+	Sources []Source `xml:"source"`
+
 	// Whether the input was understood
 	Succeeded bool `xml:"success,attr"`
 
-	// Whether a serious processing error occured
+	// Whether the query couldn't be processed
 	Errored bool `xml:"error,attr"`
 
-	// The error, if a serious processing error occured
+	// The error, if the query couldn't be processed
 	Error Error `xml:"error"`
 
 	// A URL to recalculate the query and get more pods, if there were errors
@@ -216,45 +257,19 @@ type Result struct {
 	// A comma-separated list of the IDs of pods that timed out
 	TimedOut string `xml:"timedout,attr"`
 
-	// The result pods
-	Pods []Pod `xml:"pod"`
-
-	// The query assumptions, if any were made
-	Assumptions []Assumption `xml:"assumption"`
-
-	// The example page, if the query referred to a general topic
-	ExamplePage ExamplePage `xml:"examplepage"`
-
-	// The topic name, if the query concerned a topic under development
-	FutureTopic string `xml:"futuretopic>topic,attr"`
-
-	// The language message, if the query was not in English
-	LanguageMessage LanguageMessage `xml:"languagemsg"`
-
-	// The query reinterpretation, if the query was reinterpreted
-	Reinterpretation Reinterpretation `xml:"reinterpret"`
-
-	// Alternative queries, close in spelling or meaning to the original, if any
-	Suggestions []string `xml:"didyoumean"`
-
-	// Tips (e.g., "Check your spelling and use English") for the user, if any
-	Tips []string `xml:"tips>tip>text,attr"`
-
-	// The sources used to compute the result, if any
-	Sources []Source `xml:"source"`
-
 	// The API version
 	Version string `xml:"version,attr"`
 }
 
-// PrimaryText returns the first primary pod's plaintext representation
+// PrimaryText returns the first primary pod's plaintext representation, or a
+// descriptive error
 func (res Result) PrimaryText() (text string, err error) {
-	for pod := range res.Pods {
+	for _, pod := range res.Pods {
 		if pod.Primary {
 			if len(pod.Subpods) == 0 {
 				return "", errors.New("no subpods in first primary pod")
 			}
-			return pod.Subpods[0].Plaintext
+			return strings.TrimSpace(pod.Subpods[0].Plaintext), nil
 		}
 	}
 	return "", errors.New("no primary pods")
@@ -277,7 +292,7 @@ type Source struct {
 }
 
 // A Subpod contains a distinct result or image for a Pod. Each Subpod may
-// include various representations of the result, depending on what formats
+// include various representations of a single datum, depending on what formats
 // were requested and what is relevant to the query.
 //
 // At the very least, all Subpods will have an image (possibly a picture of
@@ -286,21 +301,21 @@ type Subpod struct {
 	// The subpod title, usually an empty string
 	Title string `xml:"title,attr"`
 
-	// Whether the subpod is the query's primary subpod
-	Primary bool `xml:"primary,attr"`
-
 	// The subpod plaintext representation, if available
 	Plaintext string `xml:"plaintext"`
 
 	// The subpod image, if available
-	Image Image `xml:"img"`
+	Image *Image `xml:"img"`
 
 	// The subpod MathML representation, if available
-	MathML string `xml:"mathml,innerxml"`
+	MathML *MathML `xml:"mathml"`
 
 	// The Mathematica input, if available
 	MathematicaInput string `xml:"minput"`
 
 	// The Mathematica output, if available
 	MathematicaOutput string `xml:"moutput"`
+
+	// Whether the subpod is the query's primary subpod
+	Primary bool `xml:"primary,attr"`
 }

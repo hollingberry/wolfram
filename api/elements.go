@@ -251,7 +251,7 @@ type Result struct {
 	// Alternative queries, close in spelling or meaning to the original, if any
 	Suggestions []string `xml:"didyoumean"`
 
-	// Tips (e.g., "Check your spelling and use English") for the user, if any
+	// Tips for the user (e.g., "Check your spelling and use English"), if any
 	Tips []string `xml:"tips>tip>text,attr"`
 
 	// The sources used to compute the result, if any
@@ -286,20 +286,6 @@ type Result struct {
 
 	// The API version
 	Version string `xml:"version,attr"`
-}
-
-// PrimaryText returns the first primary pod's plaintext representation, or a
-// descriptive error
-func (res Result) PrimaryText() (text string, err error) {
-	for _, pod := range res.Pods {
-		if pod.Primary {
-			if len(pod.Subpods) == 0 {
-				return "", errors.New("no subpods in first primary pod")
-			}
-			return strings.TrimSpace(pod.Subpods[0].Plaintext), nil
-		}
-	}
-	return "", errors.New("no primary pods")
 }
 
 // A Source provides a link to a web page with source information. Sources are

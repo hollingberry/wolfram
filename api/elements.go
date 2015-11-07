@@ -114,11 +114,11 @@ type Image struct {
 
 // HTML returns an HTML string for displaying the image in a webpage.
 func (img Image) HTML() string {
-	imgXML, err := xml.Marshal(&img)
+	x, err := xml.Marshal(&img)
 	if err != nil {
 		panic(err)
 	}
-	return strings.Replace(string(imgXML), "></img>", "/>", 1)
+	return strings.Replace(string(x), "></img>", "/>", 1)
 }
 
 // Mime returns the image MIME type, or an empty string if the MIME type cannot

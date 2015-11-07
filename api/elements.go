@@ -1,8 +1,8 @@
 package api
 
 import (
+	"encoding/xml"
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 )
@@ -15,6 +15,9 @@ import (
 // The Result for the query "pi", then, will have an Assumption with this
 // information.
 type Assumption struct {
+	// The tag name
+	XMLName struct{} `xml:"assumption"`
+
 	// The assumption type
 	Type string `xml:"type,attr"`
 
@@ -33,6 +36,9 @@ type Assumption struct {
 // In the Assumption example above, there would be an AssumptionValue for the
 // mathematical constant 3.14159..., for the Greek character π, for the movie Pi, etc.
 type AssumptionValue struct {
+	// The tag name
+	XMLName struct{} `xml:"value"`
+
 	// The internal identifier for the assumption value
 	Name string `xml:"name,attr"`
 
@@ -53,6 +59,9 @@ type AssumptionValue struct {
 // as a whole succeeds. When this happens, the Pod that failed will have the
 // Error.
 type Error struct {
+	// The tag name
+	XMLName struct{} `xml:"error"`
+
 	// The error code
 	Code int `xml:"code"`
 
@@ -67,6 +76,9 @@ type Error struct {
 // For example, the Result for the query "calculus" would include an ExamplePage
 // linking to http://www.wolframalpha.com/examples/Calculus-content.html.
 type ExamplePage struct {
+	// The tag name
+	XMLName struct{} `xml:"examplepage"`
+
 	// The topic name
 	Topic string `xml:"category,attr"`
 
@@ -82,6 +94,9 @@ type ExamplePage struct {
 // textual subpods. (The image in textual subpods will just point to a picture
 // of text.)
 type Image struct {
+	// The tag name
+	XMLName struct{} `xml:"img"`
+
 	// The image URL
 	URL string `xml:"src,attr"`
 
@@ -92,22 +107,19 @@ type Image struct {
 	Title string `xml:"title,attr"`
 
 	// The image width, in pixels
-	Width int `xml:"width,attr"`
+	Width int `xml:"width,attr,omitempty"`
 
 	// The image height, in pixels
-	Height int `xml:"height,attr"`
+	Height int `xml:"height,attr,omitempty"`
 }
 
 // HTML returns an HTML string for displaying the image in a webpage.
 func (img Image) HTML() string {
-	return fmt.Sprintf(
-		`<img src="%s" alt="%s" title="%s" width="%d" height="%d"/>`,
-		img.URL,
-		img.Alt,
-		img.Title,
-		img.Width,
-		img.Height,
-	)
+	imgXML, err := xml.Marshal(&img)
+	if err != nil {
+		panic(err)
+	}
+	return string(imgXML)
 }
 
 // Mime returns the image MIME type, or an empty string if the MIME type cannot
@@ -125,6 +137,9 @@ func (img Image) Mime() string {
 // For instance, the Result for the query "wo noch nie" will contain a
 // LanguageMessage explaining that Wolfram Alpha does not yet support German.
 type LanguageMessage struct {
+	// The tag name
+	XMLName struct{} `xml:"languagemsg"`
+
 	// The message in English
 	English string `xml:"english,attr"`
 
@@ -141,6 +156,9 @@ type LanguageMessage struct {
 // http://grokbase.com/t/gg/golang-nuts/149neksqjs/go-nuts-xml-package-problems
 // for details.
 type MathML struct {
+	// The tag name
+	XMLName struct{} `xml:"mathml"`
+
 	// The MathML content
 	Xml string `xml:",innerxml"`
 }
@@ -152,6 +170,9 @@ type MathML struct {
 // For example, the Result for the query "amanita" contains seven pods, which
 // have titles like "Scientific name", "Taxonomy", and "Image", among others.
 type Pod struct {
+	// The tag name
+	XMLName struct{} `xml:"pod"`
+
 	// The pod title
 	Title string `xml:"title,attr"`
 
@@ -181,6 +202,9 @@ type Pod struct {
 // For example, the nonsensical query "blue mustang moon" might be replaced by
 // the query "mustang moon," the name of a 2002 book by Terri Farley.
 type Reinterpretation struct {
+	// The tag name
+	XMLName struct{} `xml:"reinterpret"`
+
 	// The new query
 	Query string `xml:"new,attr"`
 
@@ -200,6 +224,9 @@ type Reinterpretation struct {
 // A Result represents the Wolfram Alpha API's response to a single query.
 // Results are returned from a Client when a query is made.
 type Result struct {
+	// The tag name
+	XMLName struct{} `xml:"result"`
+
 	// The internal identifier for the result
 	ID string `xml:"id,attr"`
 
@@ -284,6 +311,9 @@ func (res Result) PrimaryText() (text string, err error) {
 // http://www.wolframalpha.com/sources/GivenNameDataSourceInformationNotes.html
 // as an example.
 type Source struct {
+	// The tag name
+	XMLName struct{} `xml:"source"`
+
 	// The address of the web page with source information
 	URL string `xml:"url,attr"`
 
@@ -298,6 +328,9 @@ type Source struct {
 // At the very least, all Subpods will have an image (possibly a picture of
 // text).
 type Subpod struct {
+	// The tag name
+	XMLName struct{} `xml:"subpod"`
+
 	// The subpod title, usually an empty string
 	Title string `xml:"title,attr"`
 

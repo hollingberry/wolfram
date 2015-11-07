@@ -84,6 +84,55 @@ func TestImage(t *testing.T) {
 	}, img)
 }
 
+func TestImage_HTML(t *testing.T) {
+	assert.Equal(
+		t,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="36" height="18"></img>`,
+		Image{
+			URL:    "http://wolframalpha.com/53",
+			Alt:    "x = 0",
+			Title:  "x = 0",
+			Width:  36,
+			Height: 18,
+		}.HTML(),
+	)
+	assert.Equal(
+		t,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" height="18"></img>`,
+		Image{
+			URL:    "http://wolframalpha.com/53",
+			Alt:    "x = 0",
+			Title:  "x = 0",
+			Width:  0,
+			Height: 18,
+		}.HTML(),
+	)
+	assert.Equal(
+		t,
+		`<img src="http://wolframalpha.com/53" alt="x = 0" title="x = 0" width="30"></img>`,
+		Image{
+			URL:    "http://wolframalpha.com/53",
+			Alt:    "x = 0",
+			Title:  "x = 0",
+			Width:  30,
+			Height: 0,
+		}.HTML(),
+	)
+}
+
+func TestImage_Mime(t *testing.T) {
+	assert.Equal(
+		t,
+		"image/gif",
+		Image{URL: "http://wolframalpha.com/53?MSPStoreType=image/gif"}.Mime(),
+	)
+	assert.Equal(
+		t,
+		"",
+		Image{URL: "http://wolframalpha.com/53?s=3"}.Mime(),
+	)
+}
+
 func TestLanguageMessage(t *testing.T) {
 	var langmsg LanguageMessage
 	const langmsgXML = `<languagemsg english='Wolfram|Alpha does not yet support German.'

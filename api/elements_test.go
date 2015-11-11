@@ -204,6 +204,39 @@ func TestPod(t *testing.T) {
 	}, pod)
 }
 
+func TestResult(t *testing.T) {
+	var result Result
+	const resultXML = `
+	  <queryresult success="true"
+	               error="false"
+	               numpods="2"
+	               datatypes="HistoricalEvent"
+	               timedout=""
+	               timedoutpods=""
+	               timing="2.668"
+	               parsetiming="0.215"
+	               parsetimedout="false"
+	               recalculate=""
+	               id="MSPa69961h82geh5b61b0ii2000054g053ihfc979f40"
+	               host="http://www3.wolframalpha.com"
+	               server="38"
+	               version="2.6">
+	  </queryresult>`
+	xml.Unmarshal([]byte(resultXML), &result)
+	assert.EqualValues(t, Result{
+		ID:            "MSPa69961h82geh5b61b0ii2000054g053ihfc979f40",
+		Succeeded:     true,
+		Errored:       false,
+		Recalculate:   "",
+		DataTypes:     "HistoricalEvent",
+		ParseTiming:   0.215,
+		ParseTimedOut: false,
+		Timing:        2.668,
+		TimedOut:      "",
+		Version:       "2.6",
+	}, result)
+}
+
 func TestSubpod(t *testing.T) {
 	var subpod Subpod
 	const subpodXML = `<subpod title="The Gods! The Gods!" primary="true">

@@ -85,6 +85,24 @@ type ExamplePage struct {
 	URL string `xml:"url,attr"`
 }
 
+// A FutureTopic occurs when a query cannot be meaningfully computed, but is
+// recognized as a topic under development.
+//
+// For example, the Result for the query "microsoft windows" would include a
+// FutureTopic indicating that the topic "Operating Systems" is under
+// investigation.
+type FutureTopic struct {
+	// The tag name
+	XMLName struct{} `xml:"futuretopic"`
+
+	// The topic name
+	Topic string `xml:"topic,attr"`
+
+	// A short message explaining why there is no data for the topic
+	// (usually "Development of this topic is under investigation...")
+	Message string `xml:"msg,attr"`
+}
+
 // An Image occurs within a Subpod when image results are requested. They point
 // to stored image files (usually GIFs, but sometimes JPEGs) giving a formatted
 // visual representation of a single subpod.
@@ -224,7 +242,7 @@ type Reinterpretation struct {
 // Results are returned from a Client when a query is made.
 type Result struct {
 	// The tag name
-	XMLName struct{} `xml:"result"`
+	XMLName struct{} `xml:"queryresult"`
 
 	// The internal identifier for the result
 	ID string `xml:"id,attr"`
@@ -238,8 +256,8 @@ type Result struct {
 	// The example page, if the query referred to a general topic
 	ExamplePage *ExamplePage `xml:"examplepage"`
 
-	// The topic name, if the query concerned a topic under development
-	FutureTopic string `xml:"futuretopic>topic,attr"`
+	// The future topic, if the query concerned a topic under development
+	FutureTopic *FutureTopic `xml:"futuretopic"`
 
 	// The language message, if the query was not in English
 	LanguageMessage *LanguageMessage `xml:"languagemsg"`
@@ -250,8 +268,8 @@ type Result struct {
 	// Alternative queries, close in spelling or meaning to the original, if any
 	Suggestions []string `xml:"didyoumean"`
 
-	// Tips for the user (e.g., "Check your spelling and use English"), if any
-	Tips []string `xml:"tips>tip>text,attr"`
+	// Tips for the user, if any
+	Tips []Tip `xml:"tips>tip"`
 
 	// The sources used to compute the result, if any
 	Sources []Source `xml:"source"`
@@ -336,4 +354,18 @@ type Subpod struct {
 
 	// Whether the subpod is the query's primary subpod
 	Primary bool `xml:"primary,attr"`
+}
+
+// A Tip offers a suggestion to the user for improving future queries. Tips
+// usually occur when Wolfram Alpha cannot understand the input. For example, a
+// tip might suggest, "Check your spelling and use English."
+//
+// Though it only has one field, this type is needed for unmarshaling the text
+// attribute of tip elements due to limitations of the encoding/xml package.
+type Tip struct {
+	// The tag name
+	XMLName struct{} `xml:"tip"`
+
+	// The tip text
+	Text struct{} `xml:"text,attr"`
 }

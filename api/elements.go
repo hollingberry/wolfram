@@ -366,6 +366,6 @@ type Tip struct {
 	// The tag name
 	XMLName struct{} `xml:"tip"`
 
-	// The tip text
-	Text struct{} `xml:"text,attr"`
+	// The tip message
+	Message string `xml:"text,attr"`
 }
